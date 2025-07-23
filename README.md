@@ -1,14 +1,14 @@
-## Ansible project for automatic creation of projects in GitLab CE and pushing code to a repository with a local VM.
+## Ansible project for automatic creation of projects in GitLab CE and pushing code to a repository on virtualized Debian.
 
 ### Project structure:
 ```
-├── group_vars # Переменные
+├── group_vars # Vars
 │   └── all
 │       ├── main.yml
-│       └── projects-config.yml # Конфиг проектов
+│       └── projects-config.yml # Project configs
 ├── inventory
 │   └── hosts.ini # Хосты для ansible
-├── projects # Dockerfile и исходный код проектов
+├── projects # Dockerfile and source code
 │   ├── flask-app
 │   │   ├── app.py
 │   │   ├── Dockerfile
@@ -21,7 +21,7 @@
 │       └── requierments.txt
 ├── README.md
 ├── roles
-│   └── gitlab-management # Роль для управления GitLab
+│   └── gitlab-management # Role for Gtilab CE management
 │       ├── tasks
 │       │   ├── generate-ssh-key.yml
 │       │   ├── loop-over-projects.yml
@@ -49,7 +49,8 @@ ansible-vault create secrets.yml
 ```
 ansible-vault edit secrets.yml -> 'gitlab_password: <PASSWORD>'
 ```
-### 4. To run playbook:
+### 4. Ensure you have network connectivity to master host machine -> VM Debian.:
+### 5. To run playbook:
 ```
 ansible-playbook -i localhost, -c local site.yml --ask-vault-pass 
 ```
