@@ -1,0 +1,7 @@
+- name: Loop over all projects
+  ansible.builtin.include_tasks: single-project-create-push.yml
+  vars:
+    project: "{{ item }}"
+  loop: "{{ projects }}"
+  loop_control:
+    loop_var: item

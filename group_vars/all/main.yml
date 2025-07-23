@@ -1,0 +1,8 @@
+# GitLab API базовые параметры
+gitlab_url: "http://gitlab.panov.local:8088"
+gitlab_api_url: "{{ gitlab_url }}/api/v4"
+gitlab_port: 2424
+gitlab_user: "root"
+
+# Персональный Access Token (в шифрованном файле secrets.yml)
+gitlab_token: "{{ vault_gitlab_token }}"

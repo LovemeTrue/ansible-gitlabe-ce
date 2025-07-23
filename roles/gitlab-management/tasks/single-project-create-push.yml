@@ -1,0 +1,63 @@
+- name: Ensure GitLab project "{{ project.name }}" exists
+  ansible.builtin.uri:
+    url: "{{ gitlab_api_url }}/projects"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    body_format: json
+    body:
+      name: "{{ project.name }}"
+      path: "{{ project.name }}"
+      description: "{{ project.description }}"
+      visibility: "{{ project.visibility }}"
+      initialize_with_readme: true
+      container_registry_enabled: "{{ project.enable_container_registry | default(false) }}"
+      tag_list: "{{ project.tags }}"
+      default_branch: main
+    status_code: [200, 201, 409]
+  register: create_project_result
+  ignore_errors: true
+
+- name: Check if local repo already exists
+  ansible.builtin.stat:
+    path: "{{ project.local_path }}/.git"
+  register: git_repo_check
+
+- name: Init new Git repo if not exists
+  ansible.builtin.command: git init
+  args:
+    chdir: "{{ project.local_path }}"
+  when: not git_repo_check.stat.exists
+
+- name: Add remote origin if not exists
+  ansible.builtin.command: git remote add origin "{{ project.git_url }}"
+  args:
+    chdir: "{{ project.local_path }}"
+  register: git_remote_add
+  failed_when: false
+  changed_when: git_remote_add.rc == 0
+
+- name: Ensure main branch exists
+  ansible.builtin.command: git checkout -B main
+  args:
+    chdir: "{{ project.local_path }}"
+
+- name: Add all files
+  ansible.builtin.command: git add .
+  args:
+    chdir: "{{ project.local_path }}"
+
+- name: Commit files
+  ansible.builtin.command: git commit -m "Initial commit from Ansible"
+  args:
+    chdir: "{{ project.local_path }}"
+  register: commit_result
+  failed_when: false
+  changed_when: "'nothing to commit' not in commit_result.stdout"
+
+- name: Force push to GitLab
+  ansible.builtin.command: git push -u origin main --force
+  args:
+    chdir: "{{ project.local_path }}"
+  register: push_result
+  failed_when: false

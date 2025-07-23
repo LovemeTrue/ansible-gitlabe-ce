@@ -1,0 +1,18 @@
+projects:
+  - name: "flask-app"
+    local_path: "{{ playbook_dir }}/projects/flask-app"
+    git_url: "ssh://git@gitlab.panov.local:{{ gitlab_port }}/root/flask-app.git"
+    description: "Flask application"
+    visibility: "public"
+    tags: ["python", "flask"]
+    enable_container_registry: true
+    enable_ci_cd: true
+
+  - name: "java-app"
+    local_path: "{{ playbook_dir }}/projects/java-app"
+    git_url: "ssh://git@gitlab.panov.local:{{ gitlab_port }}/root/java-app.git"
+    description: "Java application"
+    visibility: "public"
+    tags: ["java", "spring"]
+    enable_container_registry: true
+    enable_ci_cd: true

@@ -1,0 +1,9 @@
+---
+# Основной файл задач, включает другие таски по порядку
+- import_tasks: generate-ssh-key.yml
+- import_tasks: register-ssh-key.yml
+- import_tasks: single-project-create-push.yml
+- import_tasks: loop-over-projects.yml
+
+- name: Include single project logic
+  include_tasks: single-project-create-push.yml

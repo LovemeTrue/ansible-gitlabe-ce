@@ -1,0 +1,15 @@
+{
+  "name": "{{ project_name }}",
+  "path": "{{ project_path }}",
+  "description": "{{ project_description }}",
+  "visibility": "{{ project_visibility }}",
+  "initialize_with_readme": {{ initialize_with_readme | to_json }},
+  "default_branch": "{{ default_branch }}",
+  {% if namespace_id is defined %}
+  "namespace_id": {{ namespace_id }},
+  {% endif %}
+  "container_registry_enabled": {{ enable_container_registry | to_json }}
+  {% if tags_list %}
+  , "tag_list": {{ tags_list | to_json }}
+  {% endif %}
+}

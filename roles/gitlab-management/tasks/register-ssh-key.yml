@@ -1,0 +1,66 @@
+- name: Get existing SSH keys
+  ansible.builtin.uri:
+    url: "{{ gitlab_api_url }}/user/keys"
+    method: GET
+    headers:
+      PRIVATE-TOKEN: "{{ vault_gitlab_token }}"
+    return_content: true
+    status_code: 200
+  register: existing_keys_result
+
+- name: Set key existence flag
+  ansible.builtin.set_fact:
+    key_already_exists: >-
+      {{ 'ansible-managed-key' in (existing_keys_result.json | map(attribute='title') | list) }}
+  when: existing_keys_result.json is defined
+
+- name: Add SSH key to GitLab (if not exists)
+  ansible.builtin.uri:
+    url: "{{ gitlab_api_url }}/user/keys"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ vault_gitlab_token }}"
+    body_format: json
+    body:
+      title: "ansible-managed-key"
+      key: "{{ pubkey['content'] | b64decode }}"
+    status_code: [201, 400]
+  when:
+    - pubkey is defined
+    - not (key_already_exists | default(false))
+  register: ssh_key_register_result
+  ignore_errors: yes
+
+- name: Notify if SSH key already exists
+  ansible.builtin.debug:
+    msg: "SSH key 'ansible-managed-key' already exists in GitLab."
+  when: key_already_exists | default(false)
+
+# - name: Fail on unexpected 400 errors
+#   ansible.builtin.fail:
+#     msg: "Unexpected error adding SSH key to GitLab: {{ ssh_key_register_result.json.message | default('Unknown error') }}"
+#   when: >-
+#     ssh_key_register_result is defined and
+#     ssh_key_register_result.status == 400 and
+#     (
+#       ssh_key_register_result.json.message is not defined or
+#       (
+#         ssh_key_register_result.json.message.fingerprint_sha256 is not defined or
+#         'has already been taken' not in (ssh_key_register_result.json.message.fingerprint_sha256 | join(' '))
+#       )
+#     )
+
+- name: Fail on unexpected 400 errors
+  ansible.builtin.fail:
+    msg: "Unexpected error adding SSH key to GitLab: {{ ssh_key_register_result.json.message | default('Unknown error') }}"
+  when: >-
+    ssh_key_register_result is defined and
+    ssh_key_register_result.status == 400 and
+    (
+      ssh_key_register_result.json.message is not defined or
+      (
+        ssh_key_register_result.json.message.fingerprint_sha256 is not defined or
+        'has already been taken' not in (ssh_key_register_result.json.message.fingerprint_sha256 | join(' '))
+      )
+    )
+  ignore_errors: yes

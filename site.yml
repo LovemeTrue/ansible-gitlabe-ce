@@ -1,0 +1,14 @@
+- name: Deploy GitLab Projects
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - group_vars/all/projects-config.yml
+    - secrets.yml
+
+  tasks:
+    - name: Run project logic for each project
+      include_role:
+        name: gitlab-management
+      vars:
+        project: "{{ item }}"
+      loop: "{{ projects }}"
