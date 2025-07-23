@@ -1,3 +1,5 @@
+# tasks/single-project-create-push.yml
+#  Плейбук пушит изменения в отдельную ветку sync, затем создает ветку main (если её нет), инициирует merge request и принимает его. Это безопасный и гибкий способ синхронизации с GitLab.
 - name: Ensure GitLab project "{{ project.name }}" exists
   ansible.builtin.uri:
     url: "{{ gitlab_api_url }}/projects"
@@ -10,20 +12,18 @@
       path: "{{ project.name }}"
       description: "{{ project.description }}"
       visibility: "{{ project.visibility }}"
-      initialize_with_readme: true
       container_registry_enabled: "{{ project.enable_container_registry | default(false) }}"
       tag_list: "{{ project.tags }}"
-      default_branch: main
     status_code: [200, 201, 409]
   register: create_project_result
   ignore_errors: true
 
-- name: Check if local repo already exists
+- name: Ensure local repo exists
   ansible.builtin.stat:
     path: "{{ project.local_path }}/.git"
   register: git_repo_check
 
-- name: Init new Git repo if not exists
+- name: Initialize git repo if not exists
   ansible.builtin.command: git init
   args:
     chdir: "{{ project.local_path }}"
@@ -37,27 +37,64 @@
   failed_when: false
   changed_when: git_remote_add.rc == 0
 
-- name: Ensure main branch exists
-  ansible.builtin.command: git checkout -B main
+- name: Checkout sync branch
+  ansible.builtin.command: git checkout -B sync
   args:
     chdir: "{{ project.local_path }}"
 
-- name: Add all files
+- name: Add all local files
   ansible.builtin.command: git add .
   args:
     chdir: "{{ project.local_path }}"
 
-- name: Commit files
-  ansible.builtin.command: git commit -m "Initial commit from Ansible"
+- name: Commit changes
+  ansible.builtin.command: git commit -m "Initial import to sync branch"
   args:
     chdir: "{{ project.local_path }}"
   register: commit_result
   failed_when: false
   changed_when: "'nothing to commit' not in commit_result.stdout"
 
-- name: Force push to GitLab
-  ansible.builtin.command: git push -u origin main --force
+- name: Push sync branch to GitLab
+  ansible.builtin.command: git push -u origin sync
   args:
     chdir: "{{ project.local_path }}"
-  register: push_result
+
+- name: Create main branch (if not exists)
+  ansible.builtin.uri:
+    url: "{{ gitlab_api_url }}/projects/{{ project.name | urlencode }}/repository/branches"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    body_format: json
+    body:
+      branch: main
+      ref: sync
+    status_code: [201, 409]
+  ignore_errors: true
+
+- name: Create merge request from sync to main
+  ansible.builtin.uri:
+    url: "{{ gitlab_api_url }}/projects/{{ project.name | urlencode }}/merge_requests"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    body_format: json
+    body:
+      source_branch: sync
+      target_branch: main
+      title: "Sync initial content into main"
+  register: mr_result
   failed_when: false
+  ignore_errors: true
+
+- name: Accept merge request
+  ansible.builtin.uri:
+    url: "{{ gitlab_api_url }}/projects/{{ project.name | urlencode }}/merge_requests/{{ mr_result.json.iid }}/merge"
+    method: PUT
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    body_format: json
+    body:
+      merge_commit_message: "Merged sync into main"
+  when: mr_result.json.iid is defined

@@ -1,5 +1,6 @@
 projects:
   - name: "flask-app"
+    namespace: "root"
     local_path: "{{ playbook_dir }}/projects/flask-app"
     git_url: "ssh://git@gitlab.panov.local:{{ gitlab_port }}/root/flask-app.git"
     description: "Flask application"
@@ -9,6 +10,7 @@ projects:
     enable_ci_cd: true
 
   - name: "java-app"
+    namespace: "root"
     local_path: "{{ playbook_dir }}/projects/java-app"
     git_url: "ssh://git@gitlab.panov.local:{{ gitlab_port }}/root/java-app.git"
     description: "Java application"
